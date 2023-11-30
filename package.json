@@ -1,0 +1,37 @@
+{
+  "name": "vite-plugin-sri3",
+  "version": "1.0.0",
+  "description": "Subresource Integrity in Vite",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "keywords": [
+    "vite",
+    "sri",
+    "integrity"
+  ],
+  "author": "yoyo930021@gmail.com",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yoyo930021/vc2c.git"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.1",
+    "typescript": "^5.3.2",
+    "vite": "^5.0.4"
+  },
+  "peerDependencies": {
+    "vite": "^2 || ^3 || ^4 || ^5"
+  }
+}
