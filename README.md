@@ -2,6 +2,8 @@
 
 [Subresource Integrity](https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity) in [Vite](https://vitejs.dev/)
 
+- Zero dependencies
+
 ## Requirement
 - Vite >= 2
 - Nodejs >= 18
