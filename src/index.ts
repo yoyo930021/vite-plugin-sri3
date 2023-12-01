@@ -1,5 +1,6 @@
 import type { Plugin, HookHandler } from 'vite'
 import { createHash } from 'crypto'
+import path from 'path'
 
 const VITE_INTERNAL_ANALYSIS_PLUGIN = 'vite:build-import-analysis'
 const EXTERNAL_SCRIPT_RE = /<script[^<>]*['"]*src['"]*=['"]*([^ '"]+)['"]*[^<>]*><\/script>/g
@@ -28,25 +29,25 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
   const { ignoreMissingAsset = false } = options || {}
 
   return {
-    name: 'vite-plugin-sri2',
+    name: 'vite-plugin-sri3',
     enforce: 'post',
     apply: 'build',
     configResolved (config) {
       const generateBundle: Plugin['generateBundle'] = async function (_, bundle) {
-        const getBundleKey = (url: string) => {
+        const getBundleKey = (htmlPath: string, url: string) => {
           if (config.base === './' || config.base === '') {
-            return url
+            return path.posix.resolve(htmlPath, url)
           }
           return url.replace(config.base, '')
         }
 
-        const calculateIntegrity = async (url: string) => {
+        const calculateIntegrity = async (htmlPath: string, url: string) => {
           let source: string | Uint8Array
           const resourcePath = url
           if (resourcePath.startsWith('http')) {
             source = Buffer.from(await (await fetch(resourcePath)).arrayBuffer())
           } else {
-            const bundleItem = bundle[getBundleKey(url)]
+            const bundleItem = bundle[getBundleKey(htmlPath, url)]
             if (!bundleItem) {
               if (ignoreMissingAsset) return null
               throw new Error(`Asset ${url} not found in bundle`)
@@ -56,7 +57,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           return `sha384-${createHash('sha384').update(source).digest().toString('base64')}`
         }
 
-        const transformHTML = async function (regex: RegExp, endOffset: number, html: string) {
+        const transformHTML = async function (regex: RegExp, endOffset: number, htmlPath: string, html: string) {
           let match: RegExpExecArray | null
           const changes = []
           let offset = 0
@@ -64,7 +65,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
             const [, url] = match
             const end = regex.lastIndex
 
-            const integrity = await calculateIntegrity(url)
+            const integrity = await calculateIntegrity(htmlPath, url)
             if (!integrity) continue
 
             const insertPos = end - endOffset
@@ -87,8 +88,8 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           ) {
             let html = chunk.source.toString()
 
-            html = await transformHTML(EXTERNAL_SCRIPT_RE, 10, html)
-            html = await transformHTML(EXTERNAL_CSS_RE, 1, html)
+            html = await transformHTML(EXTERNAL_SCRIPT_RE, 10, name, html)
+            html = await transformHTML(EXTERNAL_CSS_RE, 1, name, html)
 
             chunk.source = html
           }
