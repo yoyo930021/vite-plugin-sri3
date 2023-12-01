@@ -97,7 +97,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
       }
 
       const plugin = config.plugins.find(p => p.name === VITE_INTERNAL_ANALYSIS_PLUGIN)
-      if (!plugin) throw new Error('vite-plugin-sri2 can\'t be work in versions lower than vite2.0.0')
+      if (!plugin) throw new Error('vite-plugin-sri3 can\'t be work in versions lower than vite2.0.0')
 
       hijackGenerateBundle(plugin, generateBundle)
     }
