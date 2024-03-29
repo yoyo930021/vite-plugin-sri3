@@ -5,6 +5,7 @@ import path from 'path'
 const VITE_INTERNAL_ANALYSIS_PLUGIN = 'vite:build-import-analysis'
 const EXTERNAL_SCRIPT_RE = /<script[^<>]*['"]*src['"]*=['"]*([^ '"]+)['"]*[^<>]*><\/script>/g
 const EXTERNAL_CSS_RE = /<link[^<>]*['"]*rel['"]*=['"]*stylesheet['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g
+const EXTERNAL_MODULE_RE = /<link[^<>]*['"]*rel['"]*=['"]*modulepreload['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g;
 
 export type GenerateBundle = HookHandler<Plugin['generateBundle']>
 
@@ -90,6 +91,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
 
             html = await transformHTML(EXTERNAL_SCRIPT_RE, 10, name, html)
             html = await transformHTML(EXTERNAL_CSS_RE, 1, name, html)
+            html = await transformHTML(EXTERNAL_MODULE_RE, 1, name, html)
 
             chunk.source = html
           }
