@@ -4,7 +4,7 @@
     "module": "CommonJS",
     "strict": true,
     "jsx": "preserve",
-    "importHelpers": true,
+    "importHelpers": false,
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
