@@ -46,7 +46,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           let source: string | Uint8Array
           const resourcePath = url
           if (resourcePath.startsWith('http')) {
-            source = Buffer.from(await (await fetch(resourcePath)).arrayBuffer())
+            source = new Uint8Array(await (await fetch(resourcePath)).arrayBuffer())
           } else {
             const bundleItem = bundle[getBundleKey(htmlPath, url)]
             if (!bundleItem) {
