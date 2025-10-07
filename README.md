@@ -3,6 +3,7 @@
 [Subresource Integrity](https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity) in [Vite](https://vitejs.dev/)
 
 - Zero dependencies
+- [Changelog](./CHANGELOG.md)
 
 ## Requirement
 - Vite >= 2
@@ -49,6 +50,10 @@ sri({ ignoreMissingAsset: true })
 - Why not `rollup-plugin-sri` or `@small-tech/vite-plugin-sri` ?
   - They can't work well in vite 4/5.
 
+## Tests & Coverage
+- Run `pnpm coverage` to execute the Vitest suite with instrumentation; inspect the generated `coverage/` reports locally or in CI artifacts.
+- `pnpm test:e2e` invokes Playwright to validate healthy and tampered builds in Chromium, ensuring runtime SRI enforcement still triggers errors when hashes mismatch.
+- Integration fixtures rebuild the sample Vite app and assert deterministic `sha384` hashes so plugin regressions surface before release.
 
 ## Thanks
 - [`rollup-plugin-sri`](https://github.com/JonasKruckenberg/rollup-plugin-sri)

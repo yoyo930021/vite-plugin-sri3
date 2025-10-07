@@ -5,6 +5,7 @@ node_modules
 /test-results
 /playwright-report
 /blob-report
+/coverage
 /tests/fixtures/basic/dist
 /tests/fixtures/basic/dist/**
 /tests/playwright/.cache
