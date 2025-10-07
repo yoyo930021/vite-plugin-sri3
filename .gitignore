@@ -2,6 +2,13 @@
 node_modules
 /dist
 /public
+/test-results
+/playwright-report
+/blob-report
+/tests/fixtures/basic/dist
+/tests/fixtures/basic/dist/**
+/tests/playwright/.cache
+/tests/playwright/.cache/**
 
 # local env files
 .env.local
