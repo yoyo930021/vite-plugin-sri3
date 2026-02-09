@@ -117,5 +117,14 @@ describe('vite-plugin-sri3', () => {
     const expectedIntegrity = `sha384-${createHash('sha384').update(scriptContent).digest('base64')}`
 
     expect(scriptMatch?.[2]).toBe(expectedIntegrity)
+
+    const publicMatch = html.match(/<script[^>]+src="([^"]*external\/public\.js)"[^>]+integrity="([^"]+)"[^>]*><\/script>/)
+    expect(publicMatch, 'injects integrity on parent-relative public script').not.toBeNull()
+
+    const publicScriptPath = path.join(parentRelativeFixtureRoot, 'public', 'external', 'public.js')
+    const publicScriptContent = await readFile(publicScriptPath)
+    const expectedPublicIntegrity = `sha384-${createHash('sha384').update(publicScriptContent).digest('base64')}`
+
+    expect(publicMatch?.[2]).toBe(expectedPublicIntegrity)
   })
 })
