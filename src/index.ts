@@ -6,8 +6,8 @@ const VITE_INTERNAL_ANALYSIS_PLUGIN = 'vite:build-import-analysis'
 const EXTERNAL_SCRIPT_RE = /<script[^<>]*['"]*src['"]*=['"]*([^ '"]+)['"]*[^<>]*><\/script>/g
 const EXTERNAL_CSS_RE = /<link[^<>]*['"]*rel['"]*=['"]*stylesheet['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g
 const EXTERNAL_MODULE_RE = /<link[^<>]*['"]*rel['"]*=['"]*modulepreload['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g
-const SKIP_SRI_RE = /\sskip-sri(\s|=|>|\/)/i
-const SKIP_SRI_ATTR_RE = /\s+skip-sri(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>\/]+))?\s*/gi
+const SKIP_SRI_TAG_RE = /\sskip-sri(\s|=|>|\/)/i
+const SKIP_SRI_ATTR_STRIP_RE = /\s+skip-sri(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>\/]+))?\s*/gi
 
 export type GenerateBundle = HookHandler<Plugin['generateBundle']>
 
@@ -60,7 +60,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           return `sha384-${createHash('sha384').update(source).digest().toString('base64')}`
         }
 
-        const stripSkipSriAttributes = (value: string) => value.replace(SKIP_SRI_ATTR_RE, (match, offset) => {
+        const stripSkipSriAttributes = (value: string) => value.replace(SKIP_SRI_ATTR_STRIP_RE, (match, offset) => {
           const nextChar = value[offset + match.length] ?? ''
           if (nextChar === '>' || nextChar === '/' || nextChar === '') return ''
           return ' '
@@ -74,7 +74,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
             const [rawMatch, url] = match
             const end = regex.lastIndex
 
-            if (SKIP_SRI_RE.test(rawMatch)) continue
+            if (SKIP_SRI_TAG_RE.test(rawMatch)) continue
 
             const integrity = await calculateIntegrity(htmlPath, url)
             if (!integrity) continue
