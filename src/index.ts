@@ -66,6 +66,8 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
             const [, url] = match
             const end = regex.lastIndex
 
+            if (match[0].indexOf('skip-sri') !== -1) continue;
+
             const integrity = await calculateIntegrity(htmlPath, url)
             if (!integrity) continue
 
@@ -92,6 +94,13 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
             html = await transformHTML(EXTERNAL_SCRIPT_RE, 10, name, html)
             html = await transformHTML(EXTERNAL_CSS_RE, 1, name, html)
             html = await transformHTML(EXTERNAL_MODULE_RE, 1, name, html)
+
+            // remove skip-sri attribute
+            const skipSriRegex = /(<(?:script|link)[^>]*)\s*skip-sri\s*([^>]*>)/g;
+            html = html.replace(skipSriRegex, (match, before, after) => {
+                  return `${before}${after}`;
+                }
+            )
 
             chunk.source = html
           }

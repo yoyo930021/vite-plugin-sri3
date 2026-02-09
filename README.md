@@ -49,6 +49,8 @@ sri({ ignoreMissingAsset: true })
 ## Q&A
 - Why not `rollup-plugin-sri` or `@small-tech/vite-plugin-sri` ?
   - They can't work well in vite 4/5.
+- Is it possible to skip the SRI attribute injection for certain resources?
+  - Yes, simply add a `skip-sri` attribute to the `<script>` tag, e.g. `<script src="..." skip-sri></script>`
 
 ## Tests & Coverage
 - Run `pnpm coverage` to execute the Vitest suite with instrumentation; inspect the generated `coverage/` reports locally or in CI artifacts.

@@ -50,4 +50,26 @@ describe('vite-plugin-sri3', () => {
     expect(styleMatch?.[1]).toBe(expected.style.href)
     expect(styleMatch?.[2]).toBe(expected.style.integrity)
   })
+
+  test('skips deterministic SRI attributes on scripts with skip-sri attribute', async () => {
+    // Import plugin to ensure coverage instrumentation captures source execution
+    const { sri } = await import('../src/index.ts')
+    expect(typeof sri).toBe('function')
+
+    await build({
+      configFile: path.resolve(fixtureRoot, 'vite.config.ts'),
+      logLevel: 'error',
+    })
+
+    const sourceHtml = await readFile(path.join(fixtureRoot, 'index.html'), 'utf8')
+    const html = await readFile(path.join(distDir, 'index.html'), 'utf8')
+
+    const scriptMatchSource = sourceHtml.match(/<script[^>]+src="([^"]+)"[^>]+skip-sri[^>]*><\/script>/)
+    expect(scriptMatchSource, 'find script with skip-sri attribute').not.toBeNull()
+
+    const source = scriptMatchSource?.[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regx = new RegExp(`<script[^>]+src="${source}"[^>]*><\\/script>`);
+    const scriptMatch = html.match(regx)
+    expect(scriptMatch?.[0]).not.toContain('integrity')
+  })
 })

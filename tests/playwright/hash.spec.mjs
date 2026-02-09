@@ -131,6 +131,11 @@ test.describe('vite-plugin-sri3 integration', () => {
       await expect(style).toHaveAttribute('href', expected.style.href)
       await expect(style).toHaveAttribute('integrity', expected.style.integrity)
 
+      // test skip-sri
+      const skipScript = page.locator('script[src="/skip-script.js"]')
+      await expect(skipScript).toHaveAttribute('src', '/skip-script.js')
+      await expect(skipScript).not.toHaveAttribute('integrity')
+
       expect(consoleErrors, 'no console errors triggered by SRI').toEqual([])
       expect(pageErrors, 'no page errors triggered by SRI').toEqual([])
 
