@@ -43,9 +43,9 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           return url.replace(config.base, '')
         }
 
-        const getBundleKey = (htmlPath: string, url: string) => {
+        const getBundleKey = (_htmlPath: string, url: string) => {
           if (config.base === './' || config.base === '') {
-            return path.posix.resolve(htmlPath, url)
+            return url.replace(/^[./]+/, '')
           }
           return normalizeBaseUrl(url)
         }

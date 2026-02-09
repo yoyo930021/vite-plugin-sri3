@@ -13,6 +13,8 @@ const publicFixtureRoot = path.resolve(__dirname, 'fixtures/public')
 const publicDistDir = path.resolve(publicFixtureRoot, 'dist')
 const baseRelativeFixtureRoot = path.resolve(__dirname, 'fixtures/base-relative')
 const baseRelativeDistDir = path.resolve(baseRelativeFixtureRoot, 'dist')
+const parentRelativeFixtureRoot = path.resolve(__dirname, 'fixtures/parent-relative')
+const parentRelativeDistDir = path.resolve(parentRelativeFixtureRoot, 'dist')
 
 type ExpectedHashes = {
   script: { src: string, integrity: string }
@@ -29,12 +31,14 @@ describe('vite-plugin-sri3', () => {
     await rm(distDir, { recursive: true, force: true })
     await rm(publicDistDir, { recursive: true, force: true })
     await rm(baseRelativeDistDir, { recursive: true, force: true })
+    await rm(parentRelativeDistDir, { recursive: true, force: true })
   })
 
   afterAll(async () => {
     await rm(distDir, { recursive: true, force: true })
     await rm(publicDistDir, { recursive: true, force: true })
     await rm(baseRelativeDistDir, { recursive: true, force: true })
+    await rm(parentRelativeDistDir, { recursive: true, force: true })
   })
 
   test('injects deterministic SRI attributes into generated assets', async () => {
@@ -90,6 +94,25 @@ describe('vite-plugin-sri3', () => {
     const scriptSrc = scriptMatch?.[1] ?? ''
     const normalizedSrc = scriptSrc.startsWith('./') ? scriptSrc.slice(2) : scriptSrc
     const scriptFilePath = path.join(baseRelativeDistDir, normalizedSrc)
+    const scriptContent = await readFile(scriptFilePath)
+    const expectedIntegrity = `sha384-${createHash('sha384').update(scriptContent).digest('base64')}`
+
+    expect(scriptMatch?.[2]).toBe(expectedIntegrity)
+  })
+
+  test('injects integrity for parent-relative asset paths', async () => {
+    await build({
+      configFile: path.resolve(parentRelativeFixtureRoot, 'vite.config.ts'),
+      logLevel: 'error',
+    })
+
+    const htmlPath = path.join(parentRelativeDistDir, 'pages', 'index.html')
+    const html = await readFile(htmlPath, 'utf8')
+    const scriptMatch = html.match(/<script[^>]+src="([^"]+)"[^>]+integrity="([^"]+)"[^>]*><\/script>/)
+    expect(scriptMatch, 'injects integrity on parent-relative script').not.toBeNull()
+
+    const scriptSrc = scriptMatch?.[1] ?? ''
+    const scriptFilePath = path.resolve(path.dirname(htmlPath), scriptSrc)
     const scriptContent = await readFile(scriptFilePath)
     const expectedIntegrity = `sha384-${createHash('sha384').update(scriptContent).digest('base64')}`
 
