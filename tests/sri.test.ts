@@ -11,6 +11,8 @@ const fixtureRoot = path.resolve(__dirname, 'fixtures/basic')
 const distDir = path.resolve(fixtureRoot, 'dist')
 const publicFixtureRoot = path.resolve(__dirname, 'fixtures/public')
 const publicDistDir = path.resolve(publicFixtureRoot, 'dist')
+const baseRelativeFixtureRoot = path.resolve(__dirname, 'fixtures/base-relative')
+const baseRelativeDistDir = path.resolve(baseRelativeFixtureRoot, 'dist')
 
 type ExpectedHashes = {
   script: { src: string, integrity: string }
@@ -26,11 +28,13 @@ describe('vite-plugin-sri3', () => {
     expected = JSON.parse(await readFile(expectedPath, 'utf8')) as ExpectedHashes
     await rm(distDir, { recursive: true, force: true })
     await rm(publicDistDir, { recursive: true, force: true })
+    await rm(baseRelativeDistDir, { recursive: true, force: true })
   })
 
   afterAll(async () => {
     await rm(distDir, { recursive: true, force: true })
     await rm(publicDistDir, { recursive: true, force: true })
+    await rm(baseRelativeDistDir, { recursive: true, force: true })
   })
 
   test('injects deterministic SRI attributes into generated assets', async () => {
@@ -69,6 +73,25 @@ describe('vite-plugin-sri3', () => {
     const publicScriptPath = path.join(publicFixtureRoot, 'public', 'external', 'index.js')
     const publicScriptContent = await readFile(publicScriptPath)
     const expectedIntegrity = `sha384-${createHash('sha384').update(publicScriptContent).digest('base64')}`
+
+    expect(scriptMatch?.[2]).toBe(expectedIntegrity)
+  })
+
+  test('injects integrity when base is relative', async () => {
+    await build({
+      configFile: path.resolve(baseRelativeFixtureRoot, 'vite.config.ts'),
+      logLevel: 'error',
+    })
+
+    const html = await readFile(path.join(baseRelativeDistDir, 'index.html'), 'utf8')
+    const scriptMatch = html.match(/<script[^>]+src="([^"]+)"[^>]+integrity="([^"]+)"[^>]*><\/script>/)
+    expect(scriptMatch, 'injects integrity on relative base script').not.toBeNull()
+
+    const scriptSrc = scriptMatch?.[1] ?? ''
+    const normalizedSrc = scriptSrc.startsWith('./') ? scriptSrc.slice(2) : scriptSrc
+    const scriptFilePath = path.join(baseRelativeDistDir, normalizedSrc)
+    const scriptContent = await readFile(scriptFilePath)
+    const expectedIntegrity = `sha384-${createHash('sha384').update(scriptContent).digest('base64')}`
 
     expect(scriptMatch?.[2]).toBe(expectedIntegrity)
   })
