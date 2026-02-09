@@ -38,34 +38,37 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
       const generateBundle: Plugin['generateBundle'] = async function (_, bundle) {
         const isRemoteUrl = (url: string) => /^https?:\/\//i.test(url)
 
-        const getBundleKey = (htmlPath: string, url: string) => {
-          if (config.base === './' || config.base === '') {
-            return path.posix.resolve(htmlPath, url)
-          }
-          return url.replace(config.base, '')
+        const normalizeBaseUrl = (url: string) => {
+          if (config.base === './' || config.base === '') return url
+          const base = config.base.endsWith('/') ? config.base : `${config.base}/`
+          return url.startsWith(base) ? url.slice(base.length) : url
         }
 
-        const readPublicAsset = async (url: string) => {
+        const getBundleKey = (htmlPath: string, url: string) => {
+          if (config.base === './' || config.base === '') {
+            return path.posix.normalize(path.posix.join(path.posix.dirname(htmlPath), url))
+          }
+          return normalizeBaseUrl(url)
+        }
+
+        const readPublicAsset = async (htmlPath: string, url: string) => {
           const publicDir = (config as { publicDir: string | false }).publicDir
           if (!publicDir) return null
 
-          // need perf
-          // Only strip the configured base if it's a prefix and not a relative './'
-          let publicUrl = url
-          if (config.base && config.base !== './' && config.base !== '' && publicUrl.startsWith(config.base)) {
-            publicUrl = publicUrl.slice(config.base.length)
-          }
-          // need perf
+          let publicUrl = normalizeBaseUrl(url)
 
           // Remove query string and fragment for filesystem lookup
           publicUrl = publicUrl.split(/[?#]/)[0]
 
-          // Remove leading slash to form relative path
-          const relativePath = publicUrl.startsWith('/') ? publicUrl.slice(1) : publicUrl
+          if (config.base === './' || config.base === '') {
+            publicUrl = path.posix.normalize(path.posix.join(path.posix.dirname(htmlPath), publicUrl))
+          } else {
+            publicUrl = publicUrl.startsWith('/') ? publicUrl.slice(1) : publicUrl
+          }
 
           // decode URL-encoded parts
           let decoded: string
-          try { decoded = decodeURIComponent(relativePath) } catch { decoded = relativePath }
+          try { decoded = decodeURIComponent(publicUrl) } catch { decoded = publicUrl }
 
           // Resolve against publicDir and prevent path traversal
           const filePath = path.resolve(publicDir as string, decoded)
@@ -92,7 +95,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
             return bundleItem.type === 'chunk' ? bundleItem.code : bundleItem.source
           }
 
-          const publicAsset = await readPublicAsset(url)
+          const publicAsset = await readPublicAsset(htmlPath, url)
           if (!publicAsset) {
             if (ignoreMissingAsset) return null
             throw new Error(`Asset ${url} not found in bundle/public directory.`)
