@@ -1,6 +1,7 @@
+import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import type { Plugin, HookHandler } from 'vite'
-import { createHash } from 'crypto'
-import path from 'path'
 
 const VITE_INTERNAL_ANALYSIS_PLUGIN = 'vite:build-import-analysis'
 const EXTERNAL_SCRIPT_RE = /<script[^<>]*['"]*src['"]*=['"]*([^ '"]+)['"]*[^<>]*><\/script>/g
@@ -35,25 +36,52 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
     apply: 'build',
     configResolved (config) {
       const generateBundle: Plugin['generateBundle'] = async function (_, bundle) {
+        const isRemoteUrl = (url: string) => /^https?:\/\//i.test(url)
+
+        const normalizeBaseUrl = (url: string) => {
+          if (config.base === './' || config.base === '') return url
+          return url.replace(config.base, '')
+        }
+
         const getBundleKey = (htmlPath: string, url: string) => {
           if (config.base === './' || config.base === '') {
             return path.posix.resolve(htmlPath, url)
           }
-          return url.replace(config.base, '')
+          return normalizeBaseUrl(url)
+        }
+
+        const readPublicAsset = async (url: string) => {
+          const publicDir = (config as { publicDir: string | false }).publicDir
+          if (!publicDir) return null
+
+          const publicUrl = normalizeBaseUrl(url)
+          const relativePath = publicUrl.startsWith('/') ? publicUrl.slice(1) : publicUrl
+          if (!relativePath) return null
+
+          try {
+            const filePath = path.resolve(publicDir, relativePath)
+            return await readFile(filePath)
+          } catch {
+            return null
+          }
         }
 
         const calculateIntegrity = async (htmlPath: string, url: string) => {
           let source: string | Uint8Array
-          const resourcePath = url
-          if (resourcePath.startsWith('http')) {
-            source = new Uint8Array(await (await fetch(resourcePath)).arrayBuffer())
+          if (isRemoteUrl(url)) {
+            source = new Uint8Array(await (await fetch(url)).arrayBuffer())
           } else {
             const bundleItem = bundle[getBundleKey(htmlPath, url)]
             if (!bundleItem) {
-              if (ignoreMissingAsset) return null
-              throw new Error(`Asset ${url} not found in bundle`)
+              const publicAsset = await readPublicAsset(url)
+              if (!publicAsset) {
+                if (ignoreMissingAsset) return null
+                throw new Error(`Asset ${url} not found in bundle`)
+              }
+              source = publicAsset
+            } else {
+              source = bundleItem.type === 'chunk' ? bundleItem.code : bundleItem.source
             }
-            source = bundleItem.type === 'chunk' ? bundleItem.code : bundleItem.source
           }
           return `sha384-${createHash('sha384').update(source).digest().toString('base64')}`
         }
