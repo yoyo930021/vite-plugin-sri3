@@ -70,8 +70,8 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           try { decoded = decodeURIComponent(publicUrl) } catch { decoded = publicUrl }
 
           // Resolve against publicDir and prevent path traversal
-          const filePath = path.resolve(publicDir as string, decoded)
-          const rel = path.relative(publicDir as string, filePath)
+          const filePath = path.resolve(publicDir, decoded)
+          const rel = path.relative(publicDir, filePath)
           if (rel.startsWith('..') || path.isAbsolute(rel)) return null
 
           try {
