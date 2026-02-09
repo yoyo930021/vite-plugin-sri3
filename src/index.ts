@@ -37,7 +37,8 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
     configResolved (config) {
       const generateBundle: Plugin['generateBundle'] = async function (_, bundle) {
         const isRemoteUrl = (url: string) => /^https?:\/\//i.test(url)
-
+        
+        // Remove base from URL to match bundle keys
         const normalizeBaseUrl = (url: string) => {
           if (config.base === './' || config.base === '') return url
           const base = config.base.endsWith('/') ? config.base : `${config.base}/`
@@ -62,8 +63,6 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
 
           if (config.base === './' || config.base === '') {
             publicUrl = path.posix.normalize(path.posix.join(path.posix.dirname(htmlPath), publicUrl))
-          } else {
-            publicUrl = publicUrl.startsWith('/') ? publicUrl.slice(1) : publicUrl
           }
 
           // decode URL-encoded parts
