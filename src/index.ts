@@ -5,7 +5,9 @@ import path from 'path'
 const VITE_INTERNAL_ANALYSIS_PLUGIN = 'vite:build-import-analysis'
 const EXTERNAL_SCRIPT_RE = /<script[^<>]*['"]*src['"]*=['"]*([^ '"]+)['"]*[^<>]*><\/script>/g
 const EXTERNAL_CSS_RE = /<link[^<>]*['"]*rel['"]*=['"]*stylesheet['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g
-const EXTERNAL_MODULE_RE = /<link[^<>]*['"]*rel['"]*=['"]*modulepreload['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g;
+const EXTERNAL_MODULE_RE = /<link[^<>]*['"]*rel['"]*=['"]*modulepreload['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g
+const SKIP_SRI_RE = /\sskip-sri(\s|=|>|\/)/i
+const SKIP_SRI_ATTR_RE = /\s+skip-sri(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>\/]+))?\s*/gi
 
 export type GenerateBundle = HookHandler<Plugin['generateBundle']>
 
@@ -58,13 +60,21 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           return `sha384-${createHash('sha384').update(source).digest().toString('base64')}`
         }
 
+        const stripSkipSriAttributes = (value: string) => value.replace(SKIP_SRI_ATTR_RE, (match, offset) => {
+          const nextChar = value[offset + match.length] ?? ''
+          if (nextChar === '>' || nextChar === '/' || nextChar === '') return ''
+          return ' '
+        })
+
         const transformHTML = async function (regex: RegExp, endOffset: number, htmlPath: string, html: string) {
           let match: RegExpExecArray | null
           const changes = []
           let offset = 0
           while ((match = regex.exec(html))) {
-            const [, url] = match
+            const [rawMatch, url] = match
             const end = regex.lastIndex
+
+            if (SKIP_SRI_RE.test(rawMatch)) continue
 
             const integrity = await calculateIntegrity(htmlPath, url)
             if (!integrity) continue
@@ -93,7 +103,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
             html = await transformHTML(EXTERNAL_CSS_RE, 1, name, html)
             html = await transformHTML(EXTERNAL_MODULE_RE, 1, name, html)
 
-            chunk.source = html
+            chunk.source = stripSkipSriAttributes(html)
           }
         }
       }

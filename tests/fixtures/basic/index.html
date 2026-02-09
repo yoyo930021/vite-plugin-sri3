@@ -3,9 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <title>vite-plugin-sri3 fixture</title>
+    <!-- stylesheet with skip-sri (no integrity) -->
+    <link rel="stylesheet" href="/skip.css" skip-sri />
+    <!-- stylesheet with skip-sri/ (self-closing) -->
+    <link rel="stylesheet" href="/skip-slash.css" skip-sri/>
+    <!-- stylesheet with skip-sri before rel -->
+    <link skip-sri rel="stylesheet" href="/skip-early.css" />
+    <!-- stylesheet with skip-sri="" -->
+    <link rel="stylesheet" skip-sri="" href="/skip-empty.css" />
+    <!-- modulepreload with skip-sri (no integrity) -->
+    <link rel="modulepreload" href="/skip-preload.mjs" skip-sri>
   </head>
   <body>
     <div id="app"></div>
+    <!-- Vite entry module (rewritten at build) -->
     <script type="module" src="/main.ts"></script>
+    <!-- module script with skip-sri (no integrity) -->
+    <script type="module" src="/skip.js" skip-sri></script>
+    <!-- module script with skip-sri before type -->
+    <script skip-sri type="module" src="/skip-early.js"></script>
+    <!-- module script with skip-sri="" -->
+    <script type="module" skip-sri="" src="/skip-empty.js"></script>
   </body>
 </html>
