@@ -25,6 +25,8 @@ pnpm i -D vite-plugin-sri3
 // vite.config.(js|ts|mjs|mts)
 import { defineConfig } from 'vite'
 import sri from 'vite-plugin-sri3'
+// Alternatively, use the named export:
+// import { sri } from 'vite-plugin-sri3'
 
 export default defineConfig({
   plugins: [

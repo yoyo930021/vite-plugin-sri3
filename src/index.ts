@@ -26,7 +26,7 @@ function hijackGenerateBundle (plugin: Plugin, afterHook: GenerateBundle) {
   }
 }
 
-export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
+export default function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
   const { ignoreMissingAsset = false } = options || {}
 
   return {
@@ -105,3 +105,5 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
     }
   }
 }
+
+export { sri }
