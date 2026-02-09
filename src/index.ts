@@ -66,24 +66,26 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           }
         }
 
-        const calculateIntegrity = async (htmlPath: string, url: string) => {
-          let source: string | Uint8Array
-          if (isRemoteUrl(url)) {
-            source = new Uint8Array(await (await fetch(url)).arrayBuffer())
-          } else {
-            const bundleItem = bundle[getBundleKey(htmlPath, url)]
-            if (!bundleItem) {
-              const publicAsset = await readPublicAsset(url)
-              if (!publicAsset) {
-                if (ignoreMissingAsset) return null
-                throw new Error(`Asset ${url} not found in bundle`)
-              }
-              source = publicAsset
-            } else {
-              source = bundleItem.type === 'chunk' ? bundleItem.code : bundleItem.source
-            }
-          }
+        const calculateIntegrity = async (source: string | Uint8Array): Promise<string> => {
           return `sha384-${createHash('sha384').update(source).digest().toString('base64')}`
+        }
+
+        const getAssetSource = async (htmlPath: string, url: string): Promise<string | Uint8Array | null> => {
+          if (isRemoteUrl(url)) {
+            return new Uint8Array(await (await fetch(url)).arrayBuffer())
+          }
+
+          const bundleItem = bundle[getBundleKey(htmlPath, url)]
+          if (bundleItem) {
+            return bundleItem.type === 'chunk' ? bundleItem.code : bundleItem.source
+          }
+
+          const publicAsset = await readPublicAsset(url)
+          if (!publicAsset) {
+            if (ignoreMissingAsset) return null
+            throw new Error(`Asset ${url} not found in bundle`)
+          }
+          return publicAsset
         }
 
         const transformHTML = async function (regex: RegExp, endOffset: number, htmlPath: string, html: string) {
@@ -94,8 +96,9 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
             const [, url] = match
             const end = regex.lastIndex
 
-            const integrity = await calculateIntegrity(htmlPath, url)
-            if (!integrity) continue
+            const source = await getAssetSource(htmlPath, url)
+            if (!source) continue
+            const integrity = await calculateIntegrity(source)
 
             const insertPos = end - endOffset
             changes.push({ integrity, insertPos })
