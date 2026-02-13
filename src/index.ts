@@ -6,7 +6,9 @@ import type { Plugin, HookHandler } from 'vite'
 const VITE_INTERNAL_ANALYSIS_PLUGIN = 'vite:build-import-analysis'
 const EXTERNAL_SCRIPT_RE = /<script[^<>]*['"]*src['"]*=['"]*([^ '"]+)['"]*[^<>]*><\/script>/g
 const EXTERNAL_CSS_RE = /<link[^<>]*['"]*rel['"]*=['"]*stylesheet['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g
-const EXTERNAL_MODULE_RE = /<link[^<>]*['"]*rel['"]*=['"]*modulepreload['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g;
+const EXTERNAL_MODULE_RE = /<link[^<>]*['"]*rel['"]*=['"]*modulepreload['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g
+const SKIP_SRI_TAG_RE = /\sskip-sri(\s|=|>|\/)/i
+const SKIP_SRI_ATTR_STRIP_RE = /\s+skip-sri(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>\/]+))?\s*/gi
 
 export type GenerateBundle = HookHandler<Plugin['generateBundle']>
 
@@ -89,6 +91,18 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           return `sha384-${createHash('sha384').update(source).digest().toString('base64')}`
         }
 
+        const stripSkipSriAttributesInTags = (value: string) => {
+          const stripInTag = (tag: string) => tag.replace(SKIP_SRI_ATTR_STRIP_RE, (match, offset) => {
+            const nextChar = tag[offset + match.length] ?? ''
+            if (nextChar === '>' || nextChar === '/' || nextChar === '') return ''
+            return ' '
+          })
+          // Only strip skip-sri attributes in <script> and <link> tags
+          value = value.replace(/<script\b[^>]*>/gi, stripInTag)
+          value = value.replace(/<link\b[^>]*>/gi, stripInTag)
+          return value
+        }
+
         const getAssetSource = async (htmlPath: string, url: string): Promise<string | Uint8Array | null> => {
           const remoteUrl = isRemoteUrl(url)
           if (remoteUrl) {
@@ -112,8 +126,10 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           const changes = []
           let offset = 0
           while ((match = regex.exec(html))) {
-            const [, url] = match
+            const [rawMatch, url] = match
             const end = regex.lastIndex
+
+            if (SKIP_SRI_TAG_RE.test(rawMatch)) continue
 
             const source = await getAssetSource(htmlPath, url)
             if (!source) continue
@@ -143,7 +159,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
             html = await transformHTML(EXTERNAL_CSS_RE, 1, name, html)
             html = await transformHTML(EXTERNAL_MODULE_RE, 1, name, html)
 
-            chunk.source = html
+            chunk.source = stripSkipSriAttributesInTags(html)
           }
         }
       }

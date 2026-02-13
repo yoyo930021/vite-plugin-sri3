@@ -13,6 +13,7 @@ const distDir = path.resolve(fixtureRoot, 'dist')
 const MIME_BY_EXT = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.map': 'application/json; charset=utf-8',
 }
@@ -123,11 +124,11 @@ test.describe('vite-plugin-sri3 integration', () => {
       await expect(page.locator('#app')).toHaveText('SRI fixture')
       await expect(page.locator('text=Lazy chunk loaded')).toBeVisible()
 
-      const script = page.locator('script[type="module"]')
+      const script = page.locator('script[type="module"][integrity]')
       await expect(script).toHaveAttribute('src', expected.script.src)
       await expect(script).toHaveAttribute('integrity', expected.script.integrity)
 
-      const style = page.locator('link[rel="stylesheet"]')
+      const style = page.locator('link[rel="stylesheet"][integrity]')
       await expect(style).toHaveAttribute('href', expected.style.href)
       await expect(style).toHaveAttribute('integrity', expected.style.integrity)
 

@@ -46,6 +46,15 @@ Default: `false`
 sri({ ignoreMissingAsset: true })
 ```
 
+## Skip SRI on specific tags
+
+Add the `skip-sri` attribute to any `script` or `link` tag to prevent SRI injection.
+
+```html
+<script type="module" src="/path/to/asset.js" skip-sri></script>
+<link rel="stylesheet" href="/path/to/asset.css" skip-sri />
+```
+
 ## Q&A
 - Why not `rollup-plugin-sri` or `@small-tech/vite-plugin-sri` ?
   - They can't work well in vite 4/5.
