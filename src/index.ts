@@ -60,11 +60,17 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           return `sha384-${createHash('sha384').update(source).digest().toString('base64')}`
         }
 
-        const stripSkipSriAttributes = (value: string) => value.replace(SKIP_SRI_ATTR_STRIP_RE, (match, offset) => {
-          const nextChar = value[offset + match.length] ?? ''
-          if (nextChar === '>' || nextChar === '/' || nextChar === '') return ''
-          return ' '
-        })
+        const stripSkipSriAttributesInTags = (value: string) => {
+          const stripInTag = (tag: string) => tag.replace(SKIP_SRI_ATTR_STRIP_RE, (match, offset) => {
+            const nextChar = tag[offset + match.length] ?? ''
+            if (nextChar === '>' || nextChar === '/' || nextChar === '') return ''
+            return ' '
+          })
+          // Only strip skip-sri attributes in <script> and <link> tags
+          value = value.replace(/<script\b[^>]*>/gi, stripInTag)
+          value = value.replace(/<link\b[^>]*>/gi, stripInTag)
+          return value
+        }
 
         const transformHTML = async function (regex: RegExp, endOffset: number, htmlPath: string, html: string) {
           let match: RegExpExecArray | null
@@ -103,7 +109,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
             html = await transformHTML(EXTERNAL_CSS_RE, 1, name, html)
             html = await transformHTML(EXTERNAL_MODULE_RE, 1, name, html)
 
-            chunk.source = stripSkipSriAttributes(html)
+            chunk.source = stripSkipSriAttributesInTags(html)
           }
         }
       }
