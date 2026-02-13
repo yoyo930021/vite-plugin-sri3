@@ -36,8 +36,12 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
     apply: 'build',
     configResolved (config) {
       const generateBundle: Plugin['generateBundle'] = async function (_, bundle) {
-        const isRemoteUrl = (url: string) => /^https?:\/\//i.test(url)
-        
+        const isRemoteUrl = (url: string) => {
+          if (url.startsWith('//')) return `https:${url}`
+          if (/^https?:\/\//i.test(url)) return url
+          return false
+        }
+
         // Remove base from URL to match bundle keys
         const normalizeBaseUrl = (url: string) => {
           if (config.base === './' || config.base === '') return url
@@ -86,8 +90,9 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
         }
 
         const getAssetSource = async (htmlPath: string, url: string): Promise<string | Uint8Array | null> => {
-          if (isRemoteUrl(url)) {
-            return new Uint8Array(await (await fetch(url)).arrayBuffer())
+          const remoteUrl = isRemoteUrl(url)
+          if (remoteUrl) {
+            return new Uint8Array(await (await fetch(remoteUrl)).arrayBuffer())
           }
           const bundleItem = bundle[getBundleKey(htmlPath, url)]
           if (bundleItem) {
