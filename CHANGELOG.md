@@ -1,3 +1,15 @@
+# [1.3.0](https://github.com/yoyo930021/vite-plugin-sri3/compare/v1.2.0...v1.3.0) (2026-02-13)
+
+
+### Bug Fixes
+
+* update expected JSON for script and style integrity values ([752b44f](https://github.com/yoyo930021/vite-plugin-sri3/commit/752b44f6529450bbb305b7d58d9415ceec75fd8d))
+
+
+### Features
+
+* Add skip-sri attribute ([6d3e1fa](https://github.com/yoyo930021/vite-plugin-sri3/commit/6d3e1fa45286f10ab1810553f74cbd4c4d951c07))
+
 # [1.2.0](https://github.com/yoyo930021/vite-plugin-sri3/compare/v1.1.0...v1.2.0) (2026-02-13)
 
 
