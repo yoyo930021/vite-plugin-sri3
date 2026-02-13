@@ -7,8 +7,7 @@ const VITE_INTERNAL_ANALYSIS_PLUGIN = 'vite:build-import-analysis'
 const EXTERNAL_SCRIPT_RE = /<script[^<>]*['"]*src['"]*=['"]*([^ '"]+)['"]*[^<>]*><\/script>/g
 const EXTERNAL_CSS_RE = /<link[^<>]*['"]*rel['"]*=['"]*stylesheet['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g
 const EXTERNAL_MODULE_RE = /<link[^<>]*['"]*rel['"]*=['"]*modulepreload['"]*[^<>]+['"]*href['"]*=['"]([^^ '"]+)['"][^<>]*>/g
-const SKIP_SRI_TAG_RE = /\sskip-sri(\s|=|>|\/)/i
-const SKIP_SRI_ATTR_STRIP_RE = /\s+skip-sri(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>\/]+))?\s*/gi
+const SKIP_SRI_ATTR_RE = /\s+skip-sri(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>\/]+))?/i
 
 export type GenerateBundle = HookHandler<Plugin['generateBundle']>
 
@@ -91,18 +90,6 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           return `sha384-${createHash('sha384').update(source).digest().toString('base64')}`
         }
 
-        const stripSkipSriAttributesInTags = (value: string) => {
-          const stripInTag = (tag: string) => tag.replace(SKIP_SRI_ATTR_STRIP_RE, (match, offset) => {
-            const nextChar = tag[offset + match.length] ?? ''
-            if (nextChar === '>' || nextChar === '/' || nextChar === '') return ''
-            return ' '
-          })
-          // Only strip skip-sri attributes in <script> and <link> tags
-          value = value.replace(/<script\b[^>]*>/gi, stripInTag)
-          value = value.replace(/<link\b[^>]*>/gi, stripInTag)
-          return value
-        }
-
         const getAssetSource = async (htmlPath: string, url: string): Promise<string | Uint8Array | null> => {
           const remoteUrl = isRemoteUrl(url)
           if (remoteUrl) {
@@ -124,25 +111,38 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
         const transformHTML = async function (regex: RegExp, endOffset: number, htmlPath: string, html: string) {
           let match: RegExpExecArray | null
           const changes = []
-          let offset = 0
           while ((match = regex.exec(html))) {
             const [rawMatch, url] = match
+            const start = match.index
             const end = regex.lastIndex
 
-            if (SKIP_SRI_TAG_RE.test(rawMatch)) continue
+            const skipMatch = SKIP_SRI_ATTR_RE.exec(rawMatch)
+            if (skipMatch) {
+              changes.push({
+                start: start + skipMatch.index,
+                end: start + skipMatch.index + skipMatch[0].length,
+                content: '',
+              })
+              continue
+            }
 
             const source = await getAssetSource(htmlPath, url)
             if (!source) continue
             const integrity = await calculateIntegrity(source)
 
             const insertPos = end - endOffset
-            changes.push({ integrity, insertPos })
+            changes.push({
+              start: insertPos,
+              end: insertPos,
+              content: ` integrity="${integrity}"`,
+            })
           }
-          for (const change of changes) {
-            const insertText = ` integrity="${change.integrity}"`
-            html = html.slice(0, change.insertPos + offset) + insertText + html.slice(change.insertPos + offset)
-            offset += insertText.length
+
+          for (let i = changes.length - 1; i >= 0; i--) {
+            const { start, end, content } = changes[i]
+            html = html.slice(0, start) + content + html.slice(end)
           }
+
           return html
         }
 
@@ -159,7 +159,7 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
             html = await transformHTML(EXTERNAL_CSS_RE, 1, name, html)
             html = await transformHTML(EXTERNAL_MODULE_RE, 1, name, html)
 
-            chunk.source = stripSkipSriAttributesInTags(html)
+            chunk.source = html
           }
         }
       }
