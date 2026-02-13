@@ -1,13 +1,18 @@
 import { beforeAll, afterAll, describe, expect, test } from 'vitest'
-import { build } from 'vite'
-import { fileURLToPath } from 'node:url'
-import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { rm, readFile } from 'node:fs/promises'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { build } from 'vite'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const fixtureRoot = path.resolve(__dirname, 'fixtures/basic')
 const distDir = path.resolve(fixtureRoot, 'dist')
+const baseRelativeFixtureRoot = path.resolve(__dirname, 'fixtures/base-relative')
+const baseRelativeDistDir = path.resolve(baseRelativeFixtureRoot, 'dist')
+const parentRelativeFixtureRoot = path.resolve(__dirname, 'fixtures/parent-relative')
+const parentRelativeDistDir = path.resolve(parentRelativeFixtureRoot, 'dist')
 
 type ExpectedHashes = {
   script: { src: string, integrity: string }
@@ -22,10 +27,14 @@ describe('vite-plugin-sri3', () => {
   beforeAll(async () => {
     expected = JSON.parse(await readFile(expectedPath, 'utf8')) as ExpectedHashes
     await rm(distDir, { recursive: true, force: true })
+    await rm(baseRelativeDistDir, { recursive: true, force: true })
+    await rm(parentRelativeDistDir, { recursive: true, force: true })
   })
 
   afterAll(async () => {
     await rm(distDir, { recursive: true, force: true })
+    await rm(baseRelativeDistDir, { recursive: true, force: true })
+    await rm(parentRelativeDistDir, { recursive: true, force: true })
   })
 
   test('injects deterministic SRI attributes into generated assets', async () => {
@@ -90,4 +99,53 @@ describe('vite-plugin-sri3', () => {
     expect(skipModulePreloadMatch?.[0]).not.toMatch(/\sintegrity=/)
     expect(skipModulePreloadMatch?.[0]).not.toMatch(/\sskip-sri/)
   })
+
+
+  test('injects integrity when base is relative', async () => {
+    await build({
+      configFile: path.resolve(baseRelativeFixtureRoot, 'vite.config.ts'),
+      logLevel: 'error',
+    })
+
+    const html = await readFile(path.join(baseRelativeDistDir, 'index.html'), 'utf8')
+    const scriptMatch = html.match(/<script[^>]+src="([^"]+)"[^>]+integrity="([^"]+)"[^>]*><\/script>/)
+    expect(scriptMatch, 'injects integrity on relative base script').not.toBeNull()
+
+    const scriptSrc = scriptMatch?.[1] ?? ''
+    const normalizedSrc = scriptSrc.startsWith('./') ? scriptSrc.slice(2) : scriptSrc
+    const scriptFilePath = path.join(baseRelativeDistDir, normalizedSrc)
+    const scriptContent = await readFile(scriptFilePath)
+    const expectedIntegrity = `sha384-${createHash('sha384').update(scriptContent).digest('base64')}`
+
+    expect(scriptMatch?.[2]).toBe(expectedIntegrity)
+  })
+
+  test('injects integrity for parent-relative asset paths', async () => {
+    await build({
+      configFile: path.resolve(parentRelativeFixtureRoot, 'vite.config.ts'),
+      logLevel: 'error',
+    })
+
+    const htmlPath = path.join(parentRelativeDistDir, 'pages', 'index.html')
+    const html = await readFile(htmlPath, 'utf8')
+    const scriptMatch = html.match(/<script[^>]+src="([^"]+)"[^>]+integrity="([^"]+)"[^>]*><\/script>/)
+    expect(scriptMatch, 'injects integrity on parent-relative script').not.toBeNull()
+
+    const scriptSrc = scriptMatch?.[1] ?? ''
+    const scriptFilePath = path.resolve(path.dirname(htmlPath), scriptSrc)
+    const scriptContent = await readFile(scriptFilePath)
+    const expectedIntegrity = `sha384-${createHash('sha384').update(scriptContent).digest('base64')}`
+
+    expect(scriptMatch?.[2]).toBe(expectedIntegrity)
+
+    const publicMatch = html.match(/<script[^>]+src="([^"]*external\/public\.js)"[^>]+integrity="([^"]+)"[^>]*><\/script>/)
+    expect(publicMatch, 'injects integrity on parent-relative public script').not.toBeNull()
+
+    const publicScriptPath = path.join(parentRelativeFixtureRoot, 'public', 'external', 'public.js')
+    const publicScriptContent = await readFile(publicScriptPath)
+    const expectedPublicIntegrity = `sha384-${createHash('sha384').update(publicScriptContent).digest('base64')}`
+
+    expect(publicMatch?.[2]).toBe(expectedPublicIntegrity)
+  })
+
 })

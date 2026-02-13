@@ -1,6 +1,7 @@
+import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import type { Plugin, HookHandler } from 'vite'
-import { createHash } from 'crypto'
-import path from 'path'
 
 const VITE_INTERNAL_ANALYSIS_PLUGIN = 'vite:build-import-analysis'
 const EXTERNAL_SCRIPT_RE = /<script[^<>]*['"]*src['"]*=['"]*([^ '"]+)['"]*[^<>]*><\/script>/g
@@ -37,26 +38,56 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
     apply: 'build',
     configResolved (config) {
       const generateBundle: Plugin['generateBundle'] = async function (_, bundle) {
-        const getBundleKey = (htmlPath: string, url: string) => {
-          if (config.base === './' || config.base === '') {
-            return path.posix.resolve(htmlPath, url)
-          }
-          return url.replace(config.base, '')
+        const isRemoteUrl = (url: string) => {
+          if (url.startsWith('//')) return `https:${url}`
+          if (/^https?:\/\//i.test(url)) return url
+          return false
         }
 
-        const calculateIntegrity = async (htmlPath: string, url: string) => {
-          let source: string | Uint8Array
-          const resourcePath = url
-          if (resourcePath.startsWith('http')) {
-            source = new Uint8Array(await (await fetch(resourcePath)).arrayBuffer())
-          } else {
-            const bundleItem = bundle[getBundleKey(htmlPath, url)]
-            if (!bundleItem) {
-              if (ignoreMissingAsset) return null
-              throw new Error(`Asset ${url} not found in bundle`)
-            }
-            source = bundleItem.type === 'chunk' ? bundleItem.code : bundleItem.source
+        // Remove base from URL to match bundle keys
+        const normalizeBaseUrl = (url: string) => {
+          if (config.base === './' || config.base === '') return url
+          const base = config.base.endsWith('/') ? config.base : `${config.base}/`
+          return url.startsWith(base) ? url.slice(base.length) : url
+        }
+
+        const getBundleKey = (htmlPath: string, url: string) => {
+          if (config.base === './' || config.base === '') {
+            return path.posix.normalize(path.posix.join(path.posix.dirname(htmlPath), url))
           }
+          return normalizeBaseUrl(url)
+        }
+
+        const readPublicAsset = async (htmlPath: string, url: string) => {
+          const publicDir = (config as { publicDir: string | false }).publicDir
+          if (!publicDir) return null
+
+          let publicUrl = normalizeBaseUrl(url)
+
+          // Remove query string and fragment for filesystem lookup
+          publicUrl = publicUrl.split(/[?#]/)[0]
+
+          if (config.base === './' || config.base === '') {
+            publicUrl = path.posix.normalize(path.posix.join(path.posix.dirname(htmlPath), publicUrl))
+          }
+
+          // decode URL-encoded parts
+          let decoded: string
+          try { decoded = decodeURIComponent(publicUrl) } catch { decoded = publicUrl }
+
+          // Resolve against publicDir and prevent path traversal
+          const filePath = path.resolve(publicDir, decoded)
+          const rel = path.relative(publicDir, filePath)
+          if (rel.startsWith('..') || path.isAbsolute(rel)) return null
+
+          try {
+            return await readFile(filePath)
+          } catch {
+            return null
+          }
+        }
+
+        const calculateIntegrity = async (source: string | Uint8Array): Promise<string> => {
           return `sha384-${createHash('sha384').update(source).digest().toString('base64')}`
         }
 
@@ -72,6 +103,24 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
           return value
         }
 
+        const getAssetSource = async (htmlPath: string, url: string): Promise<string | Uint8Array | null> => {
+          const remoteUrl = isRemoteUrl(url)
+          if (remoteUrl) {
+            return new Uint8Array(await (await fetch(remoteUrl)).arrayBuffer())
+          }
+          const bundleItem = bundle[getBundleKey(htmlPath, url)]
+          if (bundleItem) {
+            return bundleItem.type === 'chunk' ? bundleItem.code : bundleItem.source
+          }
+
+          const publicAsset = await readPublicAsset(htmlPath, url)
+          if (!publicAsset) {
+            if (ignoreMissingAsset) return null
+            throw new Error(`Asset ${url} not found in bundle/public directory.`)
+          }
+          return publicAsset
+        }
+
         const transformHTML = async function (regex: RegExp, endOffset: number, htmlPath: string, html: string) {
           let match: RegExpExecArray | null
           const changes = []
@@ -82,8 +131,9 @@ export function sri (options?: { ignoreMissingAsset: boolean }): Plugin {
 
             if (SKIP_SRI_TAG_RE.test(rawMatch)) continue
 
-            const integrity = await calculateIntegrity(htmlPath, url)
-            if (!integrity) continue
+            const source = await getAssetSource(htmlPath, url)
+            if (!source) continue
+            const integrity = await calculateIntegrity(source)
 
             const insertPos = end - endOffset
             changes.push({ integrity, insertPos })
