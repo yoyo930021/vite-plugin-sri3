@@ -8,7 +8,7 @@
 - [Changelog](./CHANGELOG.md)
 
 ## Requirement
-- Vite >= 2
+- Vite >= 3
 - Nodejs >= 18
 
 ## Install
