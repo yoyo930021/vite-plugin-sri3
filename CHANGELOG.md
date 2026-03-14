@@ -14,12 +14,8 @@
 ### BREAKING CHANGES
 
 * **vite-plugin-sri3:** minimum supported Vite version is now 3.x
-
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 * **vite-plugin-sri3:** package output changed from CJS to ESM, requires
 ESM-compatible import (import, not require)
-
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 
 # [1.3.0](https://github.com/yoyo930021/vite-plugin-sri3/compare/v1.2.0...v1.3.0) (2026-02-13)
 
