@@ -1,3 +1,26 @@
+# [2.0.0](https://github.com/yoyo930021/vite-plugin-sri3/compare/v1.3.0...v2.0.0) (2026-03-14)
+
+
+### chore
+
+* **vite-plugin-sri3:** drop Vite 2 support and update minimum to Vite 3 ([3547428](https://github.com/yoyo930021/vite-plugin-sri3/commit/3547428186a68f214dad7ec4ce494715fe8b45ce))
+
+
+### Features
+
+* **vite-plugin-sri3:** add Vite 8 support and plugin registry metadata ([6a6c757](https://github.com/yoyo930021/vite-plugin-sri3/commit/6a6c7575781d35538003ff15fb61342a40ba55d9)), closes [#13](https://github.com/yoyo930021/vite-plugin-sri3/issues/13)
+
+
+### BREAKING CHANGES
+
+* **vite-plugin-sri3:** minimum supported Vite version is now 3.x
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+* **vite-plugin-sri3:** package output changed from CJS to ESM, requires
+ESM-compatible import (import, not require)
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+
 # [1.3.0](https://github.com/yoyo930021/vite-plugin-sri3/compare/v1.2.0...v1.3.0) (2026-02-13)
 
 
