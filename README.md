@@ -1,5 +1,7 @@
 # vite-plugin-sri3
 
+![Vite compatibility](https://registry.vite.dev/api/badges?package=vite-plugin-sri3&tool=vite)
+
 [Subresource Integrity](https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity) in [Vite](https://vitejs.dev/)
 
 - Zero dependencies
