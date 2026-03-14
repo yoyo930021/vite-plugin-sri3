@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename)
 const fixtureRoot = path.resolve(__dirname, 'fixtures/basic')
 
 const versions = [
+  { name: 'vite3', pkg: 'vite3', distDir: path.resolve(fixtureRoot, 'dist-vite3') },
   { name: 'vite5', pkg: 'vite5', distDir: path.resolve(fixtureRoot, 'dist-vite5') },
   { name: 'vite7', pkg: 'vite7', distDir: path.resolve(fixtureRoot, 'dist-vite7') },
 ]
