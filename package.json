@@ -2,6 +2,7 @@
   "name": "vite-plugin-sri3",
   "version": "1.3.0",
   "description": "Subresource Integrity in Vite",
+  "type": "module",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "engines": {
@@ -21,6 +22,7 @@
     "release": "semantic-release"
   },
   "keywords": [
+    "vite-plugin",
     "vite",
     "sri",
     "integrity"
@@ -42,10 +44,23 @@
     "@vitest/coverage-v8": "^1.6.1",
     "semantic-release": "^25.0.3",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
+    "vite": "^8.0.0",
     "vitest": "^1.6.1"
   },
   "peerDependencies": {
-    "vite": "^2 || ^3 || ^4 || ^5 || ^6 || ^7"
+    "vite": "^2 || ^3 || ^4 || ^5 || ^6 || ^7 || ^8"
+  },
+  "compatiblePackages": {
+    "schemaVersion": 1,
+    "vite": {
+      "type": "compatible",
+      "versions": "^2 || ^3 || ^4 || ^5 || ^6 || ^7 || ^8"
+    },
+    "rolldown": {
+      "type": "unknown"
+    },
+    "rollup": {
+      "type": "unknown"
+    }
   }
 }
