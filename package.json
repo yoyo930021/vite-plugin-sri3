@@ -45,6 +45,8 @@
     "semantic-release": "^25.0.3",
     "typescript": "^5.9.3",
     "vite": "^8.0.0",
+    "vite5": "npm:vite@^5.4.21",
+    "vite7": "npm:vite@^7.3.1",
     "vitest": "^1.6.1"
   },
   "peerDependencies": {
