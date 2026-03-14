@@ -4,7 +4,13 @@
   "description": "Subresource Integrity in Vite",
   "type": "module",
   "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "engines": {
     "node": ">=18.0.0"
   },
